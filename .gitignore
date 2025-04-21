@@ -1,0 +1,11 @@
+teste*
+api/__pycache__
+label_api/__pycache__
+images
+__pycache__/
+*.env
+db*
+imagenet_classes.txt
+form_example.png
+pexels.jpg
+migrations
