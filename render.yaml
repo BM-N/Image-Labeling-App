@@ -1,0 +1,16 @@
+services:
+  - type: web
+    name: image-label-app
+    env: python
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn label_app.wsgi:application
+    envVars:
+      - key: DJANGO_SETTINGS_MODULE
+        value: label_app.settings
+      - key: SECRET_KEY
+        generateValue: true
+      - key: DEBUG
+        value: False
+      - key: ALLOWED_HOSTS
+        value: image-label-app.onrender.com
