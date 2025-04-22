@@ -1,10 +1,12 @@
 services:
   - type: web
     name: image-label-app
-    env: python
+    env: docker
     plan: free
-    buildCommand: pip install -r requirements.txt
-    startCommand: gunicorn label_app.wsgi:application
+    dockerfilePath: ./Dockerfile
+    region: oregon
+    healthCheckPath: /
+    autoDeploy: true
     envVars:
       - key: DJANGO_SETTINGS_MODULE
         value: label_app.settings
