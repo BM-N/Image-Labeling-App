@@ -17,8 +17,14 @@ with open(LABELS_PATH) as f:
 
 # Load model once
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-model = resnet50(weights='ResNet50_Weights.IMAGENET1K_V1').to(device)
-model.eval()
+_model = None
+
+def load_model():
+    global _model
+    if _model is None:
+        _model = resnet50(weights='ResNet50_Weights.IMAGENET1K_V1').to(device)
+        _model.eval()
+    return _model
 
 # Define preprocessing
 transform = transforms.Compose([
@@ -42,6 +48,7 @@ def predict(file_path: str, topk=1) :
         return []
     img_transformed = transform(image)
     img_tensor = torch.Tensor(img_transformed).unsqueeze(0).to(device)
+    model = load_model()
     with torch.no_grad():
         outputs = model(img_tensor)
         probs = torch.nn.functional.softmax(outputs[0], dim=0)
