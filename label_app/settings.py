@@ -32,7 +32,13 @@ SECRET_KEY = 'django-insecure--@+kqr%5(za43$cs_xa^78t@3tzmyjaxky++_efs^q#2-67zf&
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.environ.get("DEBUG", "True") == "True"
 
-ALLOWED_HOSTS = os.environ.get("ALLOWED_HOSTS", "127.0.0.1").split(",")
+ALLOWED_HOSTS=[
+    'image-labeling-app.onrender.com',
+    'localhost',
+    '127.0.0.1',
+    ]
+
+# ALLOWED_HOSTS = os.environ.get("ALLOWED_HOSTS", "127.0.0.1").split(",")
 
 
 # Application definition
@@ -58,8 +64,8 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
-    # 'corsheaders.middleware.CorsMiddleware',
     'whitenoise.middleware.WhiteNoiseMiddleware',    
+    # 'corsheaders.middleware.CorsMiddleware',
 ]
 
 ROOT_URLCONF = 'label_app.urls'

@@ -17,7 +17,7 @@ with open(LABELS_PATH) as f:
 
 # Load model once
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-model = resnet50(pretrained=True).to(device)
+model = resnet50(weights='ResNet50_Weights.IMAGENET1K_V1').to(device)
 model.eval()
 
 # Define preprocessing
