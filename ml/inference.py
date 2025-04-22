@@ -1,6 +1,7 @@
 import torch
 import torchvision.transforms as transforms
-from torchvision.models import resnet50
+# from torchvision.models import resnet50
+from torchvision.models import mobilenet_v2, MobileNet_V2_Weights
 from PIL import Image
 import os
 
@@ -22,11 +23,11 @@ _model = None
 def load_model():
     global _model
     if _model is None:
-        _model = resnet50(weights='ResNet50_Weights.IMAGENET1K_V1').to(device)
+        _model = mobilenet_v2(weights=MobileNet_V2_Weights.IMAGENET1K_V1).to(device)
         _model.eval()
     return _model
 
-# Define preprocessing
+# Standard ImageNet Preprocessing
 transform = transforms.Compose([
     transforms.Resize(256),
     transforms.CenterCrop(224),

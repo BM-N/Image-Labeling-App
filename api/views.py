@@ -132,7 +132,7 @@ class ImageClassificationView(generics.CreateAPIView):
         # Getting image from request
         image_file = request.FILES
         # image_file = request.get("image")
-        print(image_file)
+        # print(image_file)
         form = ClassifyImageForm({}, image_file)
 
         # form validation
