@@ -5,7 +5,7 @@ from django.contrib.auth.forms import UserCreationForm
 from django.contrib.auth.models import User
 from django.http import HttpResponseRedirect
 from django.shortcuts import render
-from django.urls import reverse_lazy
+from django.urls import reverse_lazy, reverse
 from django.views.generic import CreateView
 from rest_framework import generics, status
 from rest_framework.permissions import AllowAny, IsAuthenticated
@@ -50,7 +50,7 @@ class LoginUser(APIView):
         if user:
             refresh = RefreshToken.for_user(user)
             access_token = refresh.access_token
-            from django.urls import reverse
+            
             redirect_url = reverse("classify-image")
             # response = HttpResponseRedirect(reverse_lazy("classify-image"))
             response = HttpResponseRedirect(redirect_url)

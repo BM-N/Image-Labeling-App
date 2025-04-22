@@ -30,7 +30,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = 'django-insecure--@+kqr%5(za43$cs_xa^78t@3tzmyjaxky++_efs^q#2-67zf&'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = os.environ.get("DEBUG", "True") == "True"
+DEBUG = os.environ.get("DEBUG", "True") == "False"
 
 ALLOWED_HOSTS=[
     'image-labeling-app.onrender.com',
