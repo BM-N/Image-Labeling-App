@@ -22,5 +22,5 @@ def predict(filename, top_k=1):
         final_dict["confidence"] = final_dict.pop("score")
         return final_dict
 
-output = predict("form_example.png")
-print(output)
+# output = predict("form_example.png")
+# print(output)
