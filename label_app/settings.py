@@ -29,9 +29,9 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # SECURITY WARNING: keep the secret key used in production secret!
 
 # Comment out for production
-SECRET_KEY = "13!43452@53546576861234324#1231"
+# SECRET_KEY = "13!43452@53546576861234324#1231"
 # Comment out for local development
-# SECRET_KEY = os.getenv('SECRET_KEY')
+SECRET_KEY = os.getenv('SECRET_KEY')
 
 #debug
 if not SECRET_KEY:

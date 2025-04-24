@@ -4,7 +4,6 @@ label_api/__pycache__
 images
 __pycache__/
 *.env
-db*
 form_example.png
 pexels.jpg
 migrations

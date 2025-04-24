@@ -44,17 +44,13 @@ class LoginUser(APIView):
     def post(self, request):
         username = request.POST.get("username")
         password = request.POST.get("password")
-        print("Content-Type:", request.content_type)
-        print("POST data:", request.POST)
-
         user = authenticate(username=username, password=password)
-
         if user:
             refresh = RefreshToken.for_user(user)
             access_token = refresh.access_token
             redirect_url = reverse("classify-image")
             response = HttpResponseRedirect(redirect_url)
-            # --- Dynamically set secure flag ---
+            # Dynamically set secure flag
             is_secure = request.is_secure() 
             response.set_cookie(
                 "access_token",
@@ -74,7 +70,6 @@ class LoginUser(APIView):
                 path='/',
                 secure=is_secure,
             )
-            print(response.cookies)
             return response
         return Response(
             data={"message": "Invalid credentials, please try again"},
