@@ -5,7 +5,7 @@ from django.contrib.auth.forms import UserCreationForm
 from django.contrib.auth.models import User
 from django.http import HttpResponseRedirect
 from django.shortcuts import render
-from django.urls import reverse_lazy, reverse
+from django.urls import reverse, reverse_lazy
 from django.views.generic import CreateView
 from rest_framework import generics, status
 from rest_framework.permissions import AllowAny, IsAuthenticated
@@ -13,11 +13,11 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_simplejwt.tokens import RefreshToken
 
-# from .classify import query
+from ml.inference import predict
+
 from .forms import ClassifyImageForm, LoginForm
 from .models import Images, Labels
 from .serializers import ImagesSerializer, LabelsSerializer, UserSerializer
-from ml.inference import predict
 
 
 class RegisterView(CreateView):
@@ -50,15 +50,10 @@ class LoginUser(APIView):
         if user:
             refresh = RefreshToken.for_user(user)
             access_token = refresh.access_token
-            
             redirect_url = reverse("classify-image")
-            # response = HttpResponseRedirect(reverse_lazy("classify-image"))
             response = HttpResponseRedirect(redirect_url)
-            
             # --- Dynamically set secure flag ---
             is_secure = request.is_secure() 
-            # ---
-            
             response.set_cookie(
                 "access_token",
                 str(access_token),
@@ -72,20 +67,17 @@ class LoginUser(APIView):
                 "refresh_token",
                 str(refresh),
                 max_age=timedelta(days=1).seconds,
-                secure=is_secure,
                 httponly=True,
                 samesite='Lax',
                 path='/',
-                # , secure=True
+                secure=is_secure,
             )
-            print(response)
             return response
         return Response(
             data={"message": "Invalid credentials, please try again"},
             status=status.HTTP_401_UNAUTHORIZED,
         )
 
-### FALTA ARRUMAR O FILTRO
 class ImagesList(generics.ListAPIView):
     queryset = Images.objects.all()
     serializer_class = ImagesSerializer
@@ -121,26 +113,18 @@ class ImageClassificationView(generics.CreateAPIView):
         return ImagesSerializer
 
     def get(self, request, *args, **kwargs):
-        # if not IsAuthenticated().has_permission(
-        #     request=request, view=ImageClassificationView
-        # ):
-        #     return HttpResponseRedirect(reverse_lazy("user-login"))
         form = ClassifyImageForm()
         return render(request, "api/classify_image.html", {"form": form})
 
     def post(self, request, *args, **kwargs):
         # Getting image from request
         image_file = request.FILES
-        # image_file = request.get("image")
-        print(image_file)
         form = ClassifyImageForm({}, image_file)
 
         # form validation
         try:
             if form.is_valid():
                 image_field = form.cleaned_data["image"]
-                print(image_field)
-                print("form is valid")
         except Exception as e:
             print(f"Error: {e}")
 
@@ -150,15 +134,13 @@ class ImageClassificationView(generics.CreateAPIView):
                 data={"image": image_field}
             )
             if image_serializer.is_valid(raise_exception=True):
-                print("Image serializer is valid")
                 image_instance = image_serializer.save(uploaded_by=request.user)
             image_path = image_instance.image.name
         except Exception as e:
             print(f"Error: {e}")
 
         # Getting label info
-        
-        predictions = predict(image_path)[0]
+        predictions = predict(image_path)
         label_serializer = LabelsSerializer(
             data={
                 "label": predictions["label"],

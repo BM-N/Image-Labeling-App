@@ -1,64 +1,26 @@
-import torch
-import torchvision.transforms as transforms
-from torchvision.models import resnet50
-from PIL import Image
+import requests
 import os
+from dotenv import load_dotenv
 
-# Load ImageNet class labels (only once)
-LABELS_URL = "https://raw.githubusercontent.com/pytorch/hub/master/imagenet_classes.txt"
-LABELS_PATH = "imagenet_classes.txt"
+load_dotenv()
 
-if not os.path.exists(LABELS_PATH):
-    import urllib.request
-    urllib.request.urlretrieve(LABELS_URL, LABELS_PATH)
+api_key = os.getenv("HF_API_KEY")
+if not api_key:
+    raise ValueError("HF_API_KEY not found in environment variables. Did you set it in your .env file?")
 
-with open(LABELS_PATH) as f:
-    LABELS = [line.strip() for line in f.readlines()]
+API_URL = "https://router.huggingface.co/hf-inference/models/google/vit-base-patch16-224"
+headers = {
+        "Authorization": f"Bearer {api_key}"
+        }
 
-# Load model once
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-_model = None
+def predict(filename, top_k=1):
+        with open(filename, "rb") as f:
+                data = f.read()
+        response = requests.post(API_URL, headers=headers, data=data)
+        response.raise_for_status()
+        final_dict = response.json()[:top_k][0]
+        final_dict["confidence"] = final_dict.pop("score")
+        return final_dict
 
-def load_model():
-    global _model
-    if _model is None:
-        _model = resnet50(weights='ResNet50_Weights.IMAGENET1K_V1').to(device)
-        _model.eval()
-    return _model
-
-# Define preprocessing
-transform = transforms.Compose([
-    transforms.Resize(256),
-    transforms.CenterCrop(224),
-    transforms.ToTensor(),
-    transforms.Normalize(mean=[0.485, 0.456, 0.406],
-                         std=[0.229, 0.224, 0.225]),
-])
-
-def predict(file_path: str, topk=1) :
-    """Run ResNet50 inference on a PIL Image and return top-k labels."""
-    try:
-        # Open the image file
-        image = Image.open(file_path).convert('RGB')
-    except FileNotFoundError:
-        print(f"Error: File not found at {file_path}")
-        return []
-    except Exception as e:
-        print(f"Error opening or processing image {file_path}: {e}")
-        return []
-    img_transformed = transform(image)
-    img_tensor = torch.Tensor(img_transformed).unsqueeze(0).to(device)
-    model = load_model()
-    with torch.no_grad():
-        outputs = model(img_tensor)
-        probs = torch.nn.functional.softmax(outputs[0], dim=0)
-        topk_probs, topk_indices = torch.topk(probs, topk)
-
-    predictions = []
-    for i in range(topk):
-        predictions.append({
-            "label": LABELS[topk_indices[i]],
-            "confidence": round(topk_probs[i].item(), 4)
-        })
-    # predictions = predictions[0]
-    return predictions
+output = predict("form_example.png")
+print(output)
