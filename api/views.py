@@ -42,8 +42,10 @@ class LoginUser(APIView):
         return render(request, "registration/user_login.html", context)
 
     def post(self, request):
-        username = request.data.get("username")
-        password = request.data.get("password")
+        username = request.POST.get("username")
+        password = request.POST.get("password")
+        print("Content-Type:", request.content_type)
+        print("POST data:", request.POST)
 
         user = authenticate(username=username, password=password)
 
@@ -72,6 +74,7 @@ class LoginUser(APIView):
                 path='/',
                 secure=is_secure,
             )
+            print(response.cookies)
             return response
         return Response(
             data={"message": "Invalid credentials, please try again"},
