@@ -4,8 +4,6 @@ from django.contrib.auth.models import User
 # Create your models here.
 class Images(models.Model):
     image = models.ImageField(upload_to="images/")
-    # img_path = models.CharField(max_length=200)
-    # img_size = models.DecimalField(max_digits=5, decimal_places=4)
     uploaded_at = models.DateTimeField("Date uploaded", auto_now_add=True)
     uploaded_by = models.ForeignKey(User, on_delete=models.CASCADE, related_name = 'image')
     

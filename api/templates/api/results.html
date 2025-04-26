@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Classification Result</title>
+</head>
+<body>
+    <h1>Classification Result</h1>
+
+    <h2>Uploaded Image:</h2>
+    {% if classification_result %}
+    <img src="{{ classification_result.image.image }}" alt="Uploaded Image for Classification" style="max-width: 500px; height: auto;">
+    {% else %}
+    <p>Image could not be displayed.</p>
+    {% endif %}
+    
+    {% if classification_result %}
+    <h2>Label Details</h2>
+    <p><strong>Predicted Label:</strong> {{ classification_result.label.label }}</p>
+    <p><strong>Confidence:</strong> {{ classification_result.label.confidence|floatformat:4 }}</p>
+    <p><strong>Label ID:</strong> {{ classification_result.label.id }}</p>
+    {% else %}
+        <p>No predictions available.</p>
+    {% endif %}
+
+    <br>
+    <a href="{% url 'classify-image' %}">Classify another image</a>
+</body>
+</html>

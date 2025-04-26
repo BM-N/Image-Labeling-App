@@ -25,6 +25,18 @@ class RegisterView(CreateView):
     template_name = "registration/register.html"
     form_class = UserCreationForm
     success_url = reverse_lazy("user-login")
+    
+    
+class ResultsView(APIView):
+    permission_classes = [IsAuthenticated]
+    template_name = "api/results.html"
+    
+    def get(self, request):
+        classification_result = request.session.pop('classification_result', None)
+        context = {
+            'classification_result': classification_result,
+            }
+        return render(request, context=context, template_name=self.template_name)
 
 
 class CreateUser(generics.CreateAPIView):
@@ -76,6 +88,7 @@ class LoginUser(APIView):
             status=status.HTTP_401_UNAUTHORIZED,
         )
 
+
 class ImagesList(generics.ListAPIView):
     queryset = Images.objects.all()
     serializer_class = ImagesSerializer
@@ -96,20 +109,16 @@ class LabelsList(generics.ListAPIView):
     permission_classes = [AllowAny]
     
 
-
 class LabelsRD(generics.RetrieveDestroyAPIView):
     queryset = Labels.objects.all()
     serializer_class = LabelsSerializer
     permission_classes = [IsAuthenticated]
 
 
-class ImageClassificationView(generics.CreateAPIView):
-    serializer_class = [ImagesSerializer, LabelsSerializer]
+class ImageClassificationView(APIView):
+    serializer_class = ImagesSerializer
     permission_classes = [IsAuthenticated]
-
-    def get_serializer_class(self):
-        return ImagesSerializer
-
+    
     def get(self, request, *args, **kwargs):
         form = ClassifyImageForm()
         return render(request, "api/classify_image.html", {"form": form})
@@ -133,27 +142,31 @@ class ImageClassificationView(generics.CreateAPIView):
             )
             if image_serializer.is_valid(raise_exception=True):
                 image_instance = image_serializer.save(uploaded_by=request.user)
-            image_path = image_instance.image.name
+            image_path = image_instance.image.path
         except Exception as e:
-            print(f"Error: {e}")
+            raise Exception(f"Error: {e}")    
 
         # Getting label info
-        predictions = predict(image_path)
-        label_serializer = LabelsSerializer(
-            data={
-                "label": predictions["label"],
-                "image_id": image_instance.id,
-                "image": image_path,
-                "confidence": round(predictions["confidence"], 4),
+        try:
+            predictions = predict(image_path)
+            label_serializer = LabelsSerializer(
+                data={
+                    "label": predictions["label"],
+                    "image_id": image_instance.id,
+                    "image": image_instance.image.name,
+                    "confidence": round(predictions["confidence"], 4),
+                }
+            )
+            label_serializer.is_valid()
+            label_serializer.save()
+        except Exception:
+            return Response(label_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+        request.session['classification_result']={
+                "image": image_serializer.data,
+                "label": label_serializer.data,
             }
-        )
-        label_serializer.save() if label_serializer.is_valid(
-            raise_exception=True
-        ) else Response(label_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-        return Response(
-            data={
-                "Image": image_serializer.data,
-                "Label": label_serializer.data,
-            },
-            status=status.HTTP_201_CREATED,
-        )
+        request.session.modified = True
+        
+        return HttpResponseRedirect(reverse("classify-results"), status=status.HTTP_302_FOUND)
+        
