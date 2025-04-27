@@ -8,8 +8,6 @@ class LoginForm(forms.ModelForm):
         widgets = {
             'password': forms.PasswordInput(),
         }
-    # username = forms.CharField(label="Username", max_length=20)
-    # password = forms.CharField(label="Password")
     
 class ClassifyImageForm(forms.Form):
     image = forms.ImageField()

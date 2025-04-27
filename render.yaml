@@ -6,12 +6,10 @@ services:
     dockerfilePath: ./Dockerfile
     region: oregon
     healthCheckPath: /
-    autoDeploy: true
+    autoDeploy: false
     envVars:
       - key: DJANGO_SETTINGS_MODULE
         value: label_app.settings
-      - key: SECRET_KEY
-        generateValue: true
       - key: DEBUG
         value: False
       - key: ALLOWED_HOSTS

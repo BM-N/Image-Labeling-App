@@ -5,7 +5,7 @@ from django.contrib.auth.forms import UserCreationForm
 from django.contrib.auth.models import User
 from django.http import HttpResponseRedirect
 from django.shortcuts import render
-from django.urls import reverse_lazy, reverse
+from django.urls import reverse, reverse_lazy
 from django.views.generic import CreateView
 from rest_framework import generics, status
 from rest_framework.permissions import AllowAny, IsAuthenticated
@@ -13,11 +13,11 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_simplejwt.tokens import RefreshToken
 
-# from .classify import query
+from ml.inference import predict
+
 from .forms import ClassifyImageForm, LoginForm
 from .models import Images, Labels
 from .serializers import ImagesSerializer, LabelsSerializer, UserSerializer
-from ml.inference import predict
 
 
 class RegisterView(CreateView):
@@ -25,6 +25,18 @@ class RegisterView(CreateView):
     template_name = "registration/register.html"
     form_class = UserCreationForm
     success_url = reverse_lazy("user-login")
+    
+    
+class ResultsView(APIView):
+    permission_classes = [IsAuthenticated]
+    template_name = "api/results.html"
+    
+    def get(self, request):
+        classification_result = request.session.pop('classification_result', None)
+        context = {
+            'classification_result': classification_result,
+            }
+        return render(request, context=context, template_name=self.template_name)
 
 
 class CreateUser(generics.CreateAPIView):
@@ -42,23 +54,16 @@ class LoginUser(APIView):
         return render(request, "registration/user_login.html", context)
 
     def post(self, request):
-        username = request.data.get("username")
-        password = request.data.get("password")
-
+        username = request.POST.get("username")
+        password = request.POST.get("password")
         user = authenticate(username=username, password=password)
-
         if user:
             refresh = RefreshToken.for_user(user)
             access_token = refresh.access_token
-            
             redirect_url = reverse("classify-image")
-            # response = HttpResponseRedirect(reverse_lazy("classify-image"))
             response = HttpResponseRedirect(redirect_url)
-            
-            # --- Dynamically set secure flag ---
+            # Dynamically set secure flag
             is_secure = request.is_secure() 
-            # ---
-            
             response.set_cookie(
                 "access_token",
                 str(access_token),
@@ -72,20 +77,18 @@ class LoginUser(APIView):
                 "refresh_token",
                 str(refresh),
                 max_age=timedelta(days=1).seconds,
-                secure=is_secure,
                 httponly=True,
                 samesite='Lax',
                 path='/',
-                # , secure=True
+                secure=is_secure,
             )
-            print(response)
             return response
         return Response(
             data={"message": "Invalid credentials, please try again"},
             status=status.HTTP_401_UNAUTHORIZED,
         )
 
-### FALTA ARRUMAR O FILTRO
+
 class ImagesList(generics.ListAPIView):
     queryset = Images.objects.all()
     serializer_class = ImagesSerializer
@@ -106,41 +109,29 @@ class LabelsList(generics.ListAPIView):
     permission_classes = [AllowAny]
     
 
-
 class LabelsRD(generics.RetrieveDestroyAPIView):
     queryset = Labels.objects.all()
     serializer_class = LabelsSerializer
     permission_classes = [IsAuthenticated]
 
 
-class ImageClassificationView(generics.CreateAPIView):
-    serializer_class = [ImagesSerializer, LabelsSerializer]
+class ImageClassificationView(APIView):
+    serializer_class = ImagesSerializer
     permission_classes = [IsAuthenticated]
-
-    def get_serializer_class(self):
-        return ImagesSerializer
-
+    
     def get(self, request, *args, **kwargs):
-        # if not IsAuthenticated().has_permission(
-        #     request=request, view=ImageClassificationView
-        # ):
-        #     return HttpResponseRedirect(reverse_lazy("user-login"))
         form = ClassifyImageForm()
         return render(request, "api/classify_image.html", {"form": form})
 
     def post(self, request, *args, **kwargs):
         # Getting image from request
         image_file = request.FILES
-        # image_file = request.get("image")
-        print(image_file)
         form = ClassifyImageForm({}, image_file)
 
         # form validation
         try:
             if form.is_valid():
                 image_field = form.cleaned_data["image"]
-                print(image_field)
-                print("form is valid")
         except Exception as e:
             print(f"Error: {e}")
 
@@ -150,30 +141,32 @@ class ImageClassificationView(generics.CreateAPIView):
                 data={"image": image_field}
             )
             if image_serializer.is_valid(raise_exception=True):
-                print("Image serializer is valid")
                 image_instance = image_serializer.save(uploaded_by=request.user)
-            image_path = image_instance.image.name
+            image_path = image_instance.image.path
         except Exception as e:
-            print(f"Error: {e}")
+            raise Exception(f"Error: {e}")    
 
         # Getting label info
-        
-        predictions = predict(image_path)[0]
-        label_serializer = LabelsSerializer(
-            data={
-                "label": predictions["label"],
-                "image_id": image_instance.id,
-                "image": image_path,
-                "confidence": round(predictions["confidence"], 4),
+        try:
+            predictions = predict(image_path)
+            label_serializer = LabelsSerializer(
+                data={
+                    "label": predictions["label"],
+                    "image_id": image_instance.id,
+                    "image": image_instance.image.name,
+                    "confidence": round(predictions["confidence"], 4),
+                }
+            )
+            label_serializer.is_valid()
+            label_serializer.save()
+        except Exception:
+            return Response(label_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+        request.session['classification_result']={
+                "image": image_serializer.data,
+                "label": label_serializer.data,
             }
-        )
-        label_serializer.save() if label_serializer.is_valid(
-            raise_exception=True
-        ) else Response(label_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-        return Response(
-            data={
-                "Image": image_serializer.data,
-                "Label": label_serializer.data,
-            },
-            status=status.HTTP_201_CREATED,
-        )
+        request.session.modified = True
+        
+        return HttpResponseRedirect(reverse("classify-results"), status=status.HTTP_302_FOUND)
+        
