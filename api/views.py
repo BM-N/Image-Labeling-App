@@ -148,7 +148,7 @@ class ImageClassificationView(APIView):
 
         # Getting label info
         try:
-            predictions = predict(image_path)
+            predictions = predict(image_path)[0]
             label_serializer = LabelsSerializer(
                 data={
                     "label": predictions["label"],
